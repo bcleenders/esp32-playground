@@ -4,8 +4,9 @@
 
 #include "Module.h"
 #include "WiFiScanner.h"
+#include "HttpGet.h"
 
-Module *program = new WifiScanner();
+Module *program = new HttpGet();
 
 void setup()
 {
