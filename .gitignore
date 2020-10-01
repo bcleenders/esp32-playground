@@ -1,2 +1,7 @@
 .pio
 .vscode
+
+# This file may contain somewhat secret values
+# Ignored after first declaration with:
+# $ git update-index --assume-unchanged src/Constants.cpp
+src/Constants.cpp
