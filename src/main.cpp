@@ -1,19 +1,18 @@
 #include <Arduino.h>
-#include <WiFi.h>
 #include <HTTPClient.h>
+#include <WiFi.h>
 
+#include "HttpGet.h"
 #include "Module.h"
 #include "WiFiScanner.h"
-#include "HttpGet.h"
+#include "WifiScannerLCD.h"
 
-Module *program = new HttpGet();
+Module *program = new WifiScannerLCD();
 
-void setup()
-{
-  program->run_main();
+void setup() {
+    program->run_main();
 }
 
-void loop()
-{
-  program->run_loop();
+void loop() {
+    program->run_loop();
 }
