@@ -30,6 +30,7 @@ class LineArt : public Module {
     }
 
     uint16_t toY1(uint16_t iteration) {
+        iteration += TOTAL_STEPS;  // so the -1 on the first round won't break things :)
         iteration = iteration % TOTAL_STEPS;
         uint16_t steps_into_side = iteration % STEPS_PER_SIDE;
 
@@ -67,9 +68,15 @@ class LineArt : public Module {
     }
 
     void run_loop() {
+        // First, remove the previous line
+        uint16_t x_1 = toX1(counter);
+        uint16_t y_1 = toY1(counter);
+        uint16_t x_2 = toX2(counter);
+        uint16_t y_2 = toY2(counter);
+        tft.drawLine(x_1, y_1, x_2, y_2, WROVER_BLACK);
+
         counter = (counter + 1) % TOTAL_STEPS;
 
-        tft.fillRect(0, 0, width, height, WROVER_BLACK);
         delay(1);
         for (int i = 0; i < 35; i++) {
             uint16_t x_1 = toX1(counter + i);
@@ -81,6 +88,6 @@ class LineArt : public Module {
             tft.drawLine(x_1, y_1, x_2, y_2, WROVER_NAVY);
         }
 
-        delay(200);
+        delay(100);
     }
 };
