@@ -3,11 +3,12 @@
 #include <WiFi.h>
 
 #include "HttpGet.h"
+#include "LineArt.h"
 #include "Module.h"
 #include "WiFiScanner.h"
 #include "WifiScannerLCD.h"
 
-Module *program = new WifiScannerLCD();
+Module *program = new LineArt();
 
 void setup() {
     program->run_main();
