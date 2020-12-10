@@ -28,53 +28,6 @@
 
 WROVER_KIT_LCD tft;
 
-// this only works in portrait mode (orientation=0 or 3)
-uint16_t height = tft.height();  // (=320)
-uint16_t width = tft.width();    // (=240)
-
-// scroll control variables
-uint16_t scrollTopFixedArea = 0;  // top fixed area
-
-uint16_t yStart = scrollTopFixedArea;
-uint16_t yArea = height - scrollTopFixedArea;
-uint16_t w_tmp, h_tmp;
-int16_t x1_tmp, y1_tmp;
-int scrollPosY = scrollTopFixedArea;  // keeps track of the cursor position
-int scrollPosX = -1;
-
-int scrollText(const char *str) {
-    Serial.print(str);
-
-    if (scrollPosY == -1) {
-        scrollPosY = tft.getCursorY();
-    }
-    scrollPosX = tft.getCursorX();
-    if (scrollPosY >= height) {
-        scrollPosY = (scrollPosY % height) + scrollTopFixedArea;
-    }
-
-    tft.getTextBounds(str, scrollPosX, scrollPosY, &x1_tmp, &y1_tmp, &w_tmp, &h_tmp);
-    tft.fillRect(0, scrollPosY, width, h_tmp, WROVER_BLACK);
-
-    tft.setCursor(scrollPosX, scrollPosY);
-
-    // scroll lines
-    scrollPosY = -1;
-    for (int i = 0; i < h_tmp; i++) {
-        yStart++;
-        if (yStart == height)
-            yStart = scrollTopFixedArea;
-        tft.scrollTo(yStart);
-        // delay(1);
-    }
-
-    tft.print(str);
-    scrollPosY = tft.getCursorY();
-    return h_tmp;
-}
-
-String output;
-
 class WifiScannerLCD : public Module {
    public:
     void run_main() {
@@ -96,7 +49,7 @@ class WifiScannerLCD : public Module {
 
     void run_loop() {
         scrollText(SEPARATOR);
-        scrollText("WiFi Scan start");
+        scrollText("WiFi Scan... ");
         int n = WiFi.scanNetworks();
 
         char line[41];  // 40 visible characters + a newline
@@ -146,5 +99,53 @@ class WifiScannerLCD : public Module {
         }
 
         delay(5000);
+    }
+
+   private:
+    // this only works in portrait mode (orientation=0 or 3)
+    uint16_t height = tft.height();  // (=320)
+    uint16_t width = tft.width();    // (=240)
+
+    // scroll control variables
+    uint16_t scrollTopFixedArea = 0;  // top fixed area
+
+    uint16_t yStart = scrollTopFixedArea;
+    uint16_t yArea = height - scrollTopFixedArea;
+    uint16_t w_tmp, h_tmp;                // currently unused
+    int16_t x1_tmp, y1_tmp;               // currently unused
+    int scrollPosY = scrollTopFixedArea;  // keeps track of the cursor position
+    int scrollPosX = -1;
+
+    String output;
+
+    int scrollText(const char *str) {
+        Serial.print(str);
+
+        if (scrollPosY == -1) {
+            scrollPosY = tft.getCursorY();
+        }
+        scrollPosX = tft.getCursorX();
+        if (scrollPosY >= height) {
+            scrollPosY = (scrollPosY % height) + scrollTopFixedArea;
+        }
+
+        tft.getTextBounds(str, scrollPosX, scrollPosY, &x1_tmp, &y1_tmp, &w_tmp, &h_tmp);
+        tft.fillRect(0, scrollPosY, width, h_tmp, WROVER_BLACK);
+
+        tft.setCursor(scrollPosX, scrollPosY);
+
+        // scroll lines
+        scrollPosY = -1;
+        for (int i = 0; i < h_tmp; i++) {
+            yStart++;
+            if (yStart == height)
+                yStart = scrollTopFixedArea;
+            tft.scrollTo(yStart);
+            delay(5);
+        }
+
+        tft.print(str);
+        scrollPosY = tft.getCursorY();
+        return h_tmp;
     }
 };
