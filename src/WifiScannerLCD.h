@@ -26,8 +26,6 @@
 //     "    Windekind Wireless_2.4G - -83 dB - *"
 #endif
 
-WROVER_KIT_LCD tft;
-
 class WifiScannerLCD : public Module {
    public:
     void run_main() {
@@ -102,6 +100,8 @@ class WifiScannerLCD : public Module {
     }
 
    private:
+    WROVER_KIT_LCD tft;
+
     // this only works in portrait mode (orientation=0 or 3)
     uint16_t height = tft.height();  // (=320)
     uint16_t width = tft.width();    // (=240)
