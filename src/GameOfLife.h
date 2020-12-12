@@ -2,6 +2,8 @@
 
 #include "Module.h"
 #include "WROVER_KIT_LCD.h"
+#include <inttypes.h>
+
 
 class GameOfLife : public Module {
    private:
@@ -9,9 +11,11 @@ class GameOfLife : public Module {
     // this only works in portrait mode (orientation=0 or 3)
     uint16_t height = tft.height();  // (=320)
     uint16_t width = tft.width();    // (=240)
+    int loop_count = 0U;
 
     uint32_t currCells[240][10];
     uint32_t nextCells[240][10];
+
 
     /**
      * Get the value of the cell at position (x,y).
@@ -36,7 +40,6 @@ class GameOfLife : public Module {
             for (int dy = -1; dy <= 1; dy++) {
                 if (!(dx == 0 && dy == 0)) {  // Skip the cell itself
                     if (cell(x + dx, y + dy)) {
-                        // Serial.printf("(%u;%u)'s neighbour (%u;%u) is alive'", x, y, x + dx, y + dy);
                         aliveNeighbours++;
                     }
                 }
@@ -97,8 +100,6 @@ class GameOfLife : public Module {
                     boolean oldVal = (currCells[x][y_big] >> y_small) & 1UL;
                     boolean newVal = (nextCells[x][y_big] >> y_small) & 1UL;
 
-                    // Serial.printf("processing %u %u %u\n", x, y_big, y_small);
-
                     if (oldVal != newVal) {  // Only redraw if the value changed (optimization)
                         if (newVal) {
                             tft.drawPixel(x, y_big * 32 + y_small, WROVER_GREEN);
@@ -114,6 +115,8 @@ class GameOfLife : public Module {
     }
 
     void reset() {
+        loop_count = 0;
+
         tft.fillRect(0, 0, width, height, WROVER_BLACK);
 
         tft.setTextColor(WROVER_GREEN);
@@ -122,6 +125,7 @@ class GameOfLife : public Module {
         tft.setTextSize(2);
         tft.setCursor(30, 112);
         tft.print("Starting Game Of Life");
+        Serial.println("Starting Game of Life");
         tft.setRotation(0);
 
         delay(2000);
@@ -130,7 +134,8 @@ class GameOfLife : public Module {
 
         for (int x = 0; x < width; x++) {
             for (int y = 0; y < height; y++) {
-                nextCells[x][y] = esp_random();
+                // To avoid starting over-crowded; only 25% chance of life
+                nextCells[x][y] = esp_random() & esp_random();
             }
         }
 
@@ -140,8 +145,33 @@ class GameOfLife : public Module {
         delay(2000);
     }
 
+    uint64_t seenHashes[3];
     boolean isRepeating() {
-        return false;
+        uint64_t currHash = 0;
+        for (int x = 0; x < 240; x++) {
+            for (int y_big = 0; y_big < 10; y_big++) {
+                currHash *= 13UL;
+                currHash += currCells[x][y_big];
+            }
+        }
+
+        /*
+         * Detect cycles of two, as these seem to be the most common way to get
+         * stuck. Larger repetitions are possible but seem unlikely based on
+         * tests.
+         * 
+         * Note: loops of size 1 are a subgroup of loops of size 2, so they are
+         * also detected this way. By requiring a loop of size 2, we also
+         * require two hashes to match, reducing the chance of false positives.
+         */
+        if (currHash == seenHashes[1] && seenHashes[0] == seenHashes[2]) {
+            return true;
+        } else {
+            seenHashes[2] = seenHashes[1];
+            seenHashes[1] = seenHashes[0];
+            seenHashes[0] = currHash;
+            return false;
+        }
     }
 
    public:
@@ -152,15 +182,17 @@ class GameOfLife : public Module {
 
         tft.begin();
         tft.setRotation(0);
-
         reset();
     }
 
     void run_loop() {
+        loop_count++;
         calcNext();
         drawAndMove();
 
         if (isRepeating()) {
+            Serial.printf("Found looping life after %i iterations. Re-creating world\n", loop_count);
+            loop_count = 0;
             reset();
         }
 
