@@ -6,10 +6,11 @@
 #include "HttpGet.h"
 #include "LineArt.h"
 #include "Module.h"
+#include "Telnet.h"
 #include "WiFiScanner.h"
 #include "WifiScannerLCD.h"
 
-Module *program = new GameOfLife();
+Module *program = new Telnet();
 
 void setup() {
     program->run_main();
