@@ -1,14 +1,21 @@
-#include "WROVER_KIT_LCD.h"
 #include <Adafruit_GFX.h>  // Core graphics library
-#include "Arduino.h"
-#include <WString.h>
+#include <string.h>
 
-#include "Module.h"
-#include "WiFi.h"
+#include "Arduino.h"
 #include "Constants.h"
+#include "Module.h"
+#include "WROVER_KIT_LCD.h"
+#include "WiFi.h"
+
+#include <sys/param.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include <lwip/sockets.h>
+
+#define PORT 9001
 
 class Telnet : public Module {
-  public:
+   public:
     void run_main() {
         Serial.begin(115200);
 
@@ -19,33 +26,125 @@ class Telnet : public Module {
         tft.setRotation(0);  // portrait mode is required
         tft.fillRect(0, scrollPosY, width, height, WROVER_BLACK);
         tft.setTextColor(WROVER_GREENYELLOW);
+
         scrollText("Starting...\n");
+
+        char line[100];
+
+        snprintf(line, sizeof line, "Connecting to '%s'...\n", Constants::ssid);
+        scrollText(line);
+
+        const char *ip = Telnet::ConnectToWifi();
+
+        snprintf(line, sizeof line, "Connected. IP is: %s\n", ip);
+        scrollText(line);
+
+        xTaskCreate(tcp_server_task, "tcp_server", 4096, (void*)AF_INET, 5, NULL);
     }
 
     void run_loop() {
-        if (WiFi.status() != WL_CONNECTED) {
-          Serial.println("Connecting to Wifi");
-          const char *ip = Telnet::ConnectToWifi();
-          char line[100];
-          snprintf(line, sizeof line, "Connected. IP is: %s\n", ip);
-          scrollText(line);
-        }
-
         delay(100);
     }
 
+    static void tcp_server_task(void *pvParameters) {
+        int addr_family = AF_INET;
+        char addr_str[128];
+        struct sockaddr_in6 dest_addr;
+        struct sockaddr_in *dest_addr_ip4 = (struct sockaddr_in *)&dest_addr;
+
+        dest_addr_ip4->sin_addr.s_addr = htonl(INADDR_ANY);
+        dest_addr_ip4->sin_family = AF_INET;
+        dest_addr_ip4->sin_port = htons(PORT);
+
+        int ip_protocol = IPPROTO_IP;
+
+        int listen_sock = socket(addr_family, SOCK_STREAM, ip_protocol);
+        if (listen_sock < 0) {
+            Serial.printf("Unable to create socket: errno %d\n", errno);
+            vTaskDelete(NULL);
+            return;
+        }
+
+        Serial.println("Socket created");
+
+        int err = bind(listen_sock, (struct sockaddr *)&dest_addr, sizeof(dest_addr));
+        if (err != 0) {
+            Serial.printf("Socket unable to bind: errno %d\n", errno);
+            Serial.printf("IPPROTO: %d\n", addr_family);
+            goto CLEAN_UP;
+        }
+        Serial.printf("Socket bound, port %d\n", PORT);
+
+        err = listen(listen_sock, 1);
+        if (err != 0) {
+            Serial.printf("Error occurred during listen: errno %d\n", errno);
+            goto CLEAN_UP;
+        }
+
+        while (1) {
+            Serial.printf("Socket listening\n");
+
+            struct sockaddr_in6 source_addr; // Large enough for both IPv4 or IPv6
+            uint addr_len = sizeof(source_addr);
+            int sock = accept(listen_sock, (struct sockaddr *)&source_addr, &addr_len);
+            if (sock < 0) {
+                Serial.printf("Unable to accept connection: errno %d\n", errno);
+                break;
+            }
+
+            // Convert ip address to string
+            inet_ntoa_r(((struct sockaddr_in *)&source_addr)->sin_addr.s_addr, addr_str, sizeof(addr_str) - 1);
+
+            Serial.printf("Socket accepted ip address: %s\n", addr_str);
+
+            //do_retransmit(sock);
+            int len;
+            char rx_buffer[128];
+
+            do {
+                len = recv(sock, rx_buffer, sizeof(rx_buffer) - 1, 0);
+                if (len < 0) {
+                    Serial.printf("Error occurred during receiving: errno %d\n", errno);
+                } else if (len == 0) {
+                    Serial.printf("Connection closed\n");
+                } else {
+                    rx_buffer[len] = 0; // Null-terminate whatever is received and treat it like a string
+                    Serial.printf("Received %d bytes: %s\n", len, rx_buffer);
+
+                    // send() can return less bytes than supplied length.
+                    // Walk-around for robust implementation.
+                    int to_write = len;
+                    while (to_write > 0) {
+                        int written = send(sock, rx_buffer + (len - to_write), to_write, 0);
+                        if (written < 0) {
+                            Serial.printf("Error occurred during sending: errno %d\n", errno);
+                        }
+                        to_write -= written;
+                    }
+                }
+            } while (len > 0);
+
+            shutdown(sock, 0);
+            close(sock);
+        }
+
+        // TODO now do something with the socker
+
+
+CLEAN_UP: // label for jumping to
+        close(listen_sock);
+        vTaskDelete(NULL);
+
+    }
+
    private:
-    static const char* ConnectToWifi() {
+    static const char *ConnectToWifi() {
         WiFi.begin(Constants::ssid, Constants::password);
 
-        while (WiFi.status() != WL_CONNECTED)
-        {
+        while (WiFi.status() != WL_CONNECTED) {
             delay(500);
             Serial.println("Connecting to WiFi..");
         }
-
-        Serial.print("Connected. My IP address is: ");
-        Serial.println(WiFi.localIP());
 
         return WiFi.localIP().toString().c_str();
     }
@@ -78,7 +177,6 @@ class Telnet : public Module {
             scrollPosY = (scrollPosY % height) + scrollTopFixedArea;
         }
 
-        tft.getTextBounds(str, scrollPosX, scrollPosY, &x1_tmp, &y1_tmp, &w_tmp, &h_tmp);
         tft.fillRect(0, scrollPosY, width, h_tmp, WROVER_BLACK);
 
         tft.setCursor(scrollPosX, scrollPosY);
