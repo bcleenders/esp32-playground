@@ -92,50 +92,51 @@ class Telnet : public Module {
                 break;
             }
 
-            // Convert ip address to string
-            inet_ntoa_r(((struct sockaddr_in *)&source_addr)->sin_addr.s_addr, addr_str, sizeof(addr_str) - 1);
-
-            Serial.printf("Socket accepted ip address: %s\n", addr_str);
-
-            //do_retransmit(sock);
-            int len;
-            char rx_buffer[128];
-
-            do {
-                len = recv(sock, rx_buffer, sizeof(rx_buffer) - 1, 0);
-                if (len < 0) {
-                    Serial.printf("Error occurred during receiving: errno %d\n", errno);
-                } else if (len == 0) {
-                    Serial.printf("Connection closed\n");
-                } else {
-                    rx_buffer[len] = 0; // Null-terminate whatever is received and treat it like a string
-                    Serial.printf("Received %d bytes: %s\n", len, rx_buffer);
-
-                    // send() can return less bytes than supplied length.
-                    // Walk-around for robust implementation.
-                    int to_write = len;
-                    while (to_write > 0) {
-                        int written = send(sock, rx_buffer + (len - to_write), to_write, 0);
-                        if (written < 0) {
-                            Serial.printf("Error occurred during sending: errno %d\n", errno);
-                        }
-                        to_write -= written;
-                    }
-                }
-            } while (len > 0);
-
-            shutdown(sock, 0);
-            close(sock);
+            xTaskCreate(serve_client_task, "socket_thread", 2048, (void*)sock, 5, NULL);
         }
-
-        // TODO now do something with the socker
-
 
 CLEAN_UP: // label for jumping to
         close(listen_sock);
         vTaskDelete(NULL);
 
     }
+
+    static void serve_client_task(void *data) {
+        int sock = (int) data;
+
+        int len;
+        char rx_buffer[128];
+
+        do {
+            len = recv(sock, rx_buffer, sizeof(rx_buffer) - 1, 0);
+            if (len < 0) {
+                Serial.printf("Error occurred during receiving: errno %d\n", errno);
+            } else if (len == 0) {
+                Serial.printf("Connection closed\n");
+            } else {
+                rx_buffer[len] = 0; // Null-terminate whatever is received and treat it like a string
+                Serial.printf("Received %d bytes: %s\n", len, rx_buffer);
+
+                // send() can return less bytes than supplied length.
+                // Walk-around for robust implementation.
+                int to_write = len;
+                while (to_write > 0) {
+                    int written = send(sock, rx_buffer + (len - to_write), to_write, 0);
+                    if (written < 0) {
+                        Serial.printf("Error occurred during sending: errno %d\n", errno);
+                    }
+                    to_write -= written;
+                }
+            }
+        } while (len > 0);
+
+        shutdown(sock, 0);
+
+        close(sock);
+
+        vTaskDelete(NULL);
+    }
+
 
    private:
     static const char *ConnectToWifi() {
