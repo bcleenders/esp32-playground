@@ -2,15 +2,16 @@
 #include <HTTPClient.h>
 #include <WiFi.h>
 
-#include "GameOfLife.h"
+#include "Blink.h"
 #include "HttpGet.h"
+#include "GameOfLife.h"
 #include "LineArt.h"
 #include "Module.h"
 #include "Telnet.h"
 #include "WiFiScanner.h"
 #include "WifiScannerLCD.h"
 
-Module *program = new Telnet();
+Module *program = new Blink();
 
 void setup() {
     program->run_main();
