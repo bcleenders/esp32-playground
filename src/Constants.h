@@ -7,6 +7,8 @@ public:
     static const char *ssid;
     static const char *password;
     static const char *url;
+    static const char *influxdbIp;
+    static const char *ntpServer;
 };
 
 #endif
