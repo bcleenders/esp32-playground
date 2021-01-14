@@ -3,6 +3,7 @@
 #include <WiFi.h>
 
 #include "Blink.h"
+#include "LDR.h"
 #include "HttpGet.h"
 #include "GameOfLife.h"
 #include "LineArt.h"
@@ -11,7 +12,7 @@
 #include "WiFiScanner.h"
 #include "WifiScannerLCD.h"
 
-Module *program = new Blink();
+Module *program = new LDR();
 
 void setup() {
     program->run_main();
