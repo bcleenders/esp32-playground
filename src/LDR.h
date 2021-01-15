@@ -100,7 +100,7 @@ private:
 
       Serial.println(payload);
 
-      //http.POST(payload);
+      int httpCode = http.POST(payload);
     } else {
       for (int i = 0; i < LOOPS_BEFORE_FLUSH; i++) {
         Datapoint datapoint = datapoints[i];
@@ -108,9 +108,8 @@ private:
           datapoint.value, datapoint.time);
         Serial.println(payload);
 
-        //http.POST(payload);
+        http.POST(payload);
       }
     }
-
   }
 };
