@@ -6,32 +6,58 @@
 #include "Module.h"
 #include "Constants.h"
 
+#include "DHT.h"
+#define DHT_TYPE DHT22
+#define DHT_PIN 4
+
+#define LDR_PIN 34
+
 #define uSEC_TO_SEC 1000000
-#define INTERVAL_SEC 30
+#define INTERVAL_SEC 5
 
 #define LOOPS_BEFORE_FLUSH 5
 #define LOOPS_BEFORE_TIME_SYNC 20
 
 typedef struct {
   long int time;
-  int value;
+  int temperature;
+  int humidity; // 0 - 100%
+  int lightIntensity;
 } Datapoint;
 
 // Need to store outside of class, because classes are not stored in RTC memory
 RTC_DATA_ATTR uint loopCount = 0;
 RTC_DATA_ATTR Datapoint datapoints[LOOPS_BEFORE_FLUSH];
 
-class LDR: public Module {
+DHT dht(DHT_PIN, DHT_TYPE);
+
+class HumiditySensor: public Module {
 public:
   void run_main() {
     Serial.begin(115200);
+
+    dht.begin();
 
     if (loopCount % LOOPS_BEFORE_TIME_SYNC == 0) {
       setClock();
     }
 
-    datapoints[loopCount % LOOPS_BEFORE_FLUSH].time = (long int) time(NULL);
-    datapoints[loopCount % LOOPS_BEFORE_FLUSH].value = analogRead(analogPin);
+    int attempt = 0;
+    float temperature = dht.readTemperature();;
+    float humidity = dht.readHumidity();
+    while (attempt < 5 && (isnan(temperature) || isnan(humidity))) {
+      temperature = dht.readTemperature();
+      humidity = dht.readHumidity();
+
+      delay(50 * attempt);
+      attempt++;
+    }
+
+    int pos = loopCount % LOOPS_BEFORE_FLUSH;
+    datapoints[pos].time = (long int) time(NULL);
+    datapoints[pos].temperature = (int) temperature;
+    datapoints[pos].humidity = (int) humidity;
+    datapoints[pos].lightIntensity = analogRead(LDR_PIN);
 
     // Flush the first N iterations directly, to quickly get some feedback into Grafana
     if (loopCount < LOOPS_BEFORE_FLUSH || loopCount % LOOPS_BEFORE_FLUSH == 0) {
@@ -48,12 +74,9 @@ public:
     }
   }
 
-  void run_loop() {
-  }
+  void run_loop() { }
 
 private:
-  const int analogPin = 34;
-
   void connect_to_wifi() {
         WiFi.begin(Constants::ssid, Constants::password);
 
@@ -111,8 +134,17 @@ private:
   int send_metric(HTTPClient& http, Datapoint& datapoint) {
     char payload[100];
 
-    snprintf(payload, sizeof(payload), "esp32 value=%i %ld000000000",
-      datapoint.value, datapoint.time);
+    snprintf(payload, sizeof(payload),
+      "esp32 temperature=%i %ld000000000\n" // multiline string
+      "esp32 humidity=%i %ld000000000",
+      "esp32 light_intensity=%i %ld000000000",
+      datapoint.temperature,
+      datapoint.time,
+      datapoint.humidity,
+      datapoint.time,
+      datapoint.lightIntensity,
+      datapoint.time
+    );
     Serial.println(payload);
 
     int attempt = 0;

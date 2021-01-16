@@ -3,7 +3,7 @@
 #include <WiFi.h>
 
 #include "Blink.h"
-#include "LDR.h"
+#include "HumiditySensor.h"
 #include "HttpGet.h"
 #include "GameOfLife.h"
 #include "LineArt.h"
@@ -12,7 +12,7 @@
 #include "WiFiScanner.h"
 #include "WifiScannerLCD.h"
 
-Module *program = new LDR();
+Module *program = new HumiditySensor();
 
 void setup() {
     program->run_main();
