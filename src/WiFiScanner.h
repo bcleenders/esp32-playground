@@ -5,11 +5,9 @@
 
 int ledPin = 2;
 
-class WifiScanner : public Module
-{
-public:
-    void run_main()
-    {
+class WifiScanner : public Module {
+   public:
+    void run_main() {
         Serial.begin(115200);
 
         WiFi.mode(WIFI_STA);
@@ -22,8 +20,7 @@ public:
         digitalWrite(ledPin, LOW);
     }
 
-    void run_loop()
-    {
+    void run_loop() {
         Serial.println("Starting scan");
 
         int n = WiFi.scanNetworks();
@@ -37,39 +34,36 @@ public:
         Serial.println("| SSID                    | signal | encryption      |");
         Serial.println(" ----------------------------------------------------");
 
-        for (int i = 0; i < n; i++)
-        {
+        for (int i = 0; i < n; i++) {
             String ssid = WiFi.SSID(i);
-            if (ssid.length() > 23)
-            {
+            if (ssid.length() > 23) {
                 ssid = ssid.substring(0, 20) + "...";
             }
 
             int rssi = WiFi.RSSI(i);
             String encryption;
 
-            switch (WiFi.encryptionType(i))
-            {
-            case WIFI_AUTH_OPEN:
-                encryption = "open";
-                break;
-            case WIFI_AUTH_WEP:
-                encryption = "WEP";
-                break;
-            case WIFI_AUTH_WPA_PSK:
-                encryption = "WPA_PSK";
-                break;
-            case WIFI_AUTH_WPA2_PSK:
-                encryption = "WPA2_PSK";
-                break;
-            case WIFI_AUTH_WPA_WPA2_PSK:
-                encryption = "WPA_WPA2_PSK";
-                break;
-            case WIFI_AUTH_WPA2_ENTERPRISE:
-                encryption = "WPA2_ENTERPRISE";
-                break;
-            default:
-                encryption = "N/A";
+            switch (WiFi.encryptionType(i)) {
+                case WIFI_AUTH_OPEN:
+                    encryption = "open";
+                    break;
+                case WIFI_AUTH_WEP:
+                    encryption = "WEP";
+                    break;
+                case WIFI_AUTH_WPA_PSK:
+                    encryption = "WPA_PSK";
+                    break;
+                case WIFI_AUTH_WPA2_PSK:
+                    encryption = "WPA2_PSK";
+                    break;
+                case WIFI_AUTH_WPA_WPA2_PSK:
+                    encryption = "WPA_WPA2_PSK";
+                    break;
+                case WIFI_AUTH_WPA2_ENTERPRISE:
+                    encryption = "WPA2_ENTERPRISE";
+                    break;
+                default:
+                    encryption = "N/A";
             }
 
             // String
