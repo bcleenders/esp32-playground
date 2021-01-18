@@ -5,3 +5,4 @@
 # Ignored after first declaration with:
 # $ git update-index --assume-unchanged src/Constants.cpp
 src/Constants.cpp
+_*
