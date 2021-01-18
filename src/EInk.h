@@ -7,14 +7,15 @@
 #include "Module.h"
 
 // Pin outs for ESP32 featherwing
-#define SRAM_CS 32
-#define EPD_CS 15
-#define EPD_DC 33
-#define EPD_RESET -1  // can set to -1 and share with microcontroller Reset!
-#define EPD_BUSY -1   // can set to -1 to not use a pin (will wait a fixed delay)
+#ifndef EPD_PORTS
+#define EPD_PORTS
+  #define SRAM_CS 32
+  #define EPD_CS 15
+  #define EPD_DC 33
+  #define EPD_RESET -1  // can set to -1 and share with microcontroller Reset!
+  #define EPD_BUSY -1   // can set to -1 to not use a pin (will wait a fixed delay)
+#endif
 
-// 2.9" Grayscale Featherwing or Breakout:
-ThinkInk_290_Grayscale4_T5 display(EPD_DC, EPD_RESET, EPD_CS, SRAM_CS, EPD_BUSY);
 
 
 // Runs on the huzzah esp32, so run with:
@@ -58,4 +59,8 @@ class EInk : public Module {
     void run_loop() {
         delay(10000);
     }
+
+private:
+    // 2.9" Grayscale Featherwing or Breakout:
+    ThinkInk_290_Grayscale4_T5 display = ThinkInk_290_Grayscale4_T5(EPD_DC, EPD_RESET, EPD_CS, SRAM_CS, EPD_BUSY);
 };

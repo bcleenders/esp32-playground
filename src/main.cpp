@@ -13,7 +13,7 @@
 #include "WiFiScanner.h"
 #include "WifiScannerLCD.h"
 
-Module *program = new EInk();
+Module *program = new HumiditySensor();
 
 void setup() {
     program->run_main();
