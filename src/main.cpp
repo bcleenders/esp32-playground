@@ -9,11 +9,12 @@
 #include "HumiditySensor.h"
 #include "LineArt.h"
 #include "Module.h"
+#include "PWM.h"
 #include "Telnet.h"
 #include "WiFiScanner.h"
 #include "WifiScannerLCD.h"
 
-Module *program = new HumiditySensor();
+Module *program = new PWM();
 
 void setup() {
     program->run_main();
